@@ -1,6 +1,7 @@
 mod updater;
 mod game_runner;
 
+use tauri::Emitter;
 use updater::{check_for_updates, download_update, get_installed_version, UpdateInfo, DownloadProgress};
 use game_runner::launch_game;
 
