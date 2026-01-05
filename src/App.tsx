@@ -20,15 +20,23 @@ interface DownloadProgress {
   status: string;
 }
 
+interface LauncherConfig {
+  fullscreen: boolean;
+}
+
 type AppState = 'checking' | 'ready' | 'update-available' | 'downloading' | 'error';
+type View = 'main' | 'settings';
 
 function App() {
   const [state, setState] = useState<AppState>('checking');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>('main');
+  const [config, setConfig] = useState<LauncherConfig>({ fullscreen: true });
 
   useEffect(() => {
+    loadConfig();
     checkForUpdates();
 
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
@@ -87,6 +95,24 @@ function App() {
     }
   }
 
+  async function loadConfig() {
+    try {
+      const cfg = await invoke<LauncherConfig>('get_config');
+      setConfig(cfg);
+    } catch (e) {
+      console.error('Failed to load config:', e);
+    }
+  }
+
+  async function saveConfig(newConfig: LauncherConfig) {
+    try {
+      await invoke('update_config', { config: newConfig });
+      setConfig(newConfig);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   // Show message if not running in Tauri
   if (!isTauri) {
     return (
@@ -115,21 +141,65 @@ function App() {
     );
   }
 
+  if (view === 'settings') {
+    return (
+      <div className="launcher">
+        <header className="launcher-header">
+          <h1>ASTRA</h1>
+          <span className="tagline">Mine. Fight. Trade. Explore.</span>
+        </header>
+
+        <main className="launcher-content">
+          <section className="settings-section">
+            <div className="settings-header">
+              <h2>Settings</h2>
+              <button onClick={() => setView('main')} className="back-btn">
+                ← Back
+              </button>
+            </div>
+
+            <div className="settings-options">
+              <div className="setting-item">
+                <label htmlFor="fullscreen-toggle">
+                  <span className="setting-label">Fullscreen Mode</span>
+                  <span className="setting-description">
+                    Launch the game in fullscreen by default
+                  </span>
+                </label>
+                <input
+                  id="fullscreen-toggle"
+                  type="checkbox"
+                  className="toggle"
+                  checked={config.fullscreen}
+                  onChange={(e) => saveConfig({ fullscreen: e.target.checked })}
+                />
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer className="launcher-footer">
+          <span>2025 NoMag Games</span>
+          <div className="footer-links">
+            <a href="https://wiki.astragame.online" target="_blank" rel="noopener noreferrer">Wiki</a>
+            <a href="https://client.astragame.online" target="_blank" rel="noopener noreferrer">Play in Browser</a>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="launcher">
       <header className="launcher-header">
+        <button onClick={() => setView('settings')} className="settings-btn" title="Settings">
+          ⚙️
+        </button>
         <h1>ASTRA</h1>
         <span className="tagline">Mine. Fight. Trade. Explore.</span>
       </header>
 
       <main className="launcher-content">
-        <section className="patch-notes">
-          <h2>Patch Notes</h2>
-          <div className="notes-content">
-            {updateInfo?.release_notes || 'Loading...'}
-          </div>
-        </section>
-
         <section className="status-section">
           {state === 'checking' && (
             <div className="status">
@@ -187,6 +257,7 @@ function App() {
       <footer className="launcher-footer">
         <span>2025 NoMag Games</span>
         <div className="footer-links">
+          <a href="https://github.com/nomaggames/astra/releases" target="_blank" rel="noopener noreferrer">Patch Notes</a>
           <a href="https://wiki.astragame.online" target="_blank" rel="noopener noreferrer">Wiki</a>
           <a href="https://client.astragame.online" target="_blank" rel="noopener noreferrer">Play in Browser</a>
         </div>

@@ -1,9 +1,11 @@
 mod updater;
 mod game_runner;
+mod config;
 
 use tauri::Emitter;
 use updater::{check_for_updates, download_update, get_installed_version, UpdateInfo, DownloadProgress};
 use game_runner::launch_game;
+use config::{LauncherConfig, load_config, save_config};
 
 #[tauri::command]
 async fn check_updates() -> Result<UpdateInfo, String> {
@@ -38,6 +40,16 @@ async fn uninstall_game() -> Result<(), String> {
     updater::uninstall_game().await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_config() -> Result<LauncherConfig, String> {
+    load_config().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn update_config(config: LauncherConfig) -> Result<(), String> {
+    save_config(&config).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -50,6 +62,8 @@ pub fn run() {
             download_game_update,
             launch_astra,
             uninstall_game,
+            get_config,
+            update_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::process::Command;
+use crate::config::load_config;
 
 const GAME_FOLDER_NAME: &str = "astra-game";
 
@@ -34,25 +35,42 @@ pub async fn launch_game() -> Result<(), Box<dyn std::error::Error + Send + Sync
         return Err("Game not installed. Please download first.".into());
     }
 
+    // Load config to check fullscreen setting
+    let config = load_config().unwrap_or_default();
+
     #[cfg(target_os = "windows")]
     {
-        Command::new(&executable)
-            .spawn()?;
+        let mut cmd = Command::new(&executable);
+
+        if config.fullscreen {
+            cmd.arg("--fullscreen");
+        }
+
+        cmd.spawn()?;
     }
 
     #[cfg(target_os = "macos")]
     {
         let install_dir = get_install_dir()?;
-        Command::new("open")
-            .arg("-a")
-            .arg(install_dir.join("ASTRA.app"))
-            .spawn()?;
+        let mut cmd = Command::new("open");
+        cmd.arg("-a").arg(install_dir.join("ASTRA.app"));
+
+        if config.fullscreen {
+            cmd.arg("--args").arg("--fullscreen");
+        }
+
+        cmd.spawn()?;
     }
 
     #[cfg(target_os = "linux")]
     {
-        Command::new(&executable)
-            .spawn()?;
+        let mut cmd = Command::new(&executable);
+
+        if config.fullscreen {
+            cmd.arg("--fullscreen");
+        }
+
+        cmd.spawn()?;
     }
 
     Ok(())

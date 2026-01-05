@@ -86,19 +86,26 @@ pub async fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error
     // Find the correct asset for this platform
     // For private repos, use the API URL ("url") instead of "browser_download_url"
     let asset_name = get_platform_asset_name();
+    let zip_filename = format!("ASTRA-{}.zip", asset_name);
+
     let download_url = game_release["assets"]
         .as_array()
         .and_then(|assets| {
-            assets.iter().find(|a| {
-                a["name"]
-                    .as_str()
-                    .map(|n| n.to_lowercase().contains(&asset_name))
-                    .unwrap_or(false)
-            })
+            // Look for exact match (e.g., "ASTRA-windows.zip")
+            assets.iter()
+                .find(|a| a["name"].as_str() == Some(&zip_filename))
+                .and_then(|asset| asset["url"].as_str())
         })
-        .and_then(|asset| asset["url"].as_str())
         .unwrap_or("")
         .to_string();
+
+    if download_url.is_empty() {
+        return Err(format!(
+            "No download found for this platform. Expected file '{}' not found in release assets. \
+            Please ensure the build creates a zip file for this platform.",
+            zip_filename
+        ).into());
+    }
 
     let installed_version = get_installed_version().await?;
 
