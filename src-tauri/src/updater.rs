@@ -84,6 +84,7 @@ pub async fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error
         .to_string();
 
     // Find the correct asset for this platform
+    // For private repos, use the API URL ("url") instead of "browser_download_url"
     let asset_name = get_platform_asset_name();
     let download_url = game_release["assets"]
         .as_array()
@@ -95,7 +96,7 @@ pub async fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error
                     .unwrap_or(false)
             })
         })
-        .and_then(|asset| asset["browser_download_url"].as_str())
+        .and_then(|asset| asset["url"].as_str())
         .unwrap_or("")
         .to_string();
 
