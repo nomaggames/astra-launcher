@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "identifier": "online.astragame.launcher",
   "build": {
+    "beforeDevCommand": "npm run dev:vite",
     "devUrl": "http://localhost:5174",
     "frontendDist": "../dist"
   },
