@@ -50,7 +50,9 @@ pub async fn get_installed_version() -> Result<Option<String>, Box<dyn std::erro
 }
 
 pub async fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error + Send + Sync>> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
     // Fetch latest release from GitHub API
     let url = format!(
@@ -135,7 +137,9 @@ pub async fn download_update<F>(
 where
     F: Fn(DownloadProgress) + Send + 'static,
 {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     let install_dir = get_install_dir()?;
 
     // Create install directory if it doesn't exist
@@ -155,7 +159,16 @@ where
         .header("Authorization", format!("Bearer {}", GITHUB_TOKEN))
         .header("Accept", "application/octet-stream")
         .send()
-        .await?;
+        .await
+        .map_err(|e| format!("Failed to send download request: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Download failed with status {}: {}",
+            response.status(),
+            response.text().await.unwrap_or_default()
+        ).into());
+    }
 
     let total_size = response.content_length().unwrap_or(0);
     let mut downloaded: u64 = 0;
